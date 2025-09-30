@@ -67,7 +67,17 @@ public class WhisperXService
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
 
-        await WaitForExitAsync(process, cancellationToken).ConfigureAwait(false);
+        using var cancellationRegistration = cancellationToken.Register(() => TryTerminateProcess(process));
+
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            TryTerminateProcess(process);
+            throw;
+        }
 
         var stdout = await stdoutTask.ConfigureAwait(false);
         var stderr = await stderrTask.ConfigureAwait(false);
@@ -88,11 +98,6 @@ public class WhisperXService
         var segments = ParseSegments(document.RootElement);
         CleanupOutputDirectory(outputDir);
         return new WhisperXResult(segments);
-    }
-
-    private static async Task WaitForExitAsync(Process process, CancellationToken cancellationToken)
-    {
-        await Task.Run(() => process.WaitForExit(), cancellationToken).ConfigureAwait(false);
     }
 
     private static IReadOnlyList<TranscriptionSegment> ParseSegments(JsonElement root)
@@ -141,6 +146,21 @@ public class WhisperXService
         catch
         {
             // Ignore cleanup failures.
+        }
+    }
+
+    private static void TryTerminateProcess(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+            // Ignore termination failures.
         }
     }
 }

@@ -31,10 +31,20 @@ public class OllamaService
 
         using var process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start ollama process");
 
+        using var cancellationRegistration = cancellationToken.Register(() => TryTerminateProcess(process));
+
         var stdoutTask = process.StandardOutput.ReadToEndAsync();
         var stderrTask = process.StandardError.ReadToEndAsync();
 
-        await WaitForExitAsync(process, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            TryTerminateProcess(process);
+            throw;
+        }
 
         var stdout = await stdoutTask.ConfigureAwait(false);
         var stderr = await stderrTask.ConfigureAwait(false);
@@ -89,6 +99,8 @@ public class OllamaService
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(_options.CommandTimeout);
 
+        using var cancellationRegistration = cts.Token.Register(() => TryTerminateProcess(process));
+
         while (await process.StandardOutput.ReadLineAsync() is { } line)
         {
             if (string.IsNullOrWhiteSpace(line))
@@ -111,7 +123,15 @@ public class OllamaService
         }
 
         var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-        await WaitForExitAsync(process, cts.Token).ConfigureAwait(false);
+        try
+        {
+            await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            TryTerminateProcess(process);
+            throw;
+        }
 
         if (process.ExitCode != 0)
         {
@@ -134,8 +154,18 @@ public class OllamaService
         };
     }
 
-    private static async Task WaitForExitAsync(Process process, CancellationToken cancellationToken)
+    private static void TryTerminateProcess(Process process)
     {
-        await Task.Run(() => process.WaitForExit(), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch
+        {
+            // Ignore termination failures.
+        }
     }
 }
