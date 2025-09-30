@@ -1,0 +1,120 @@
+<Window x:Class="WhisperXOllamaApp.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:WhisperXOllamaApp.ViewModels"
+        mc:Ignorable="d"
+        Title="WhisperX Ollama Meeting Summarizer"
+        Height="720"
+        Width="1100">
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="2*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <GroupBox Header="Audio Source" Grid.Row="0" Grid.ColumnSpan="2" Margin="0 0 0 12">
+            <Grid Margin="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Text="{Binding AudioFilePath, UpdateSourceTrigger=PropertyChanged}" Margin="0 0 8 0"/>
+                <Button Content="Browse" Grid.Column="1" Command="{Binding BrowseAudioCommand}" Width="100"/>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Ollama Configuration" Grid.Row="1" Grid.Column="0" Margin="0 0 12 12">
+            <StackPanel Margin="8">
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
+                    <TextBlock Text="Model" VerticalAlignment="Center" Width="80"/>
+                    <ComboBox ItemsSource="{Binding AvailableModels}"
+                              SelectedItem="{Binding SelectedModel}"
+                              Width="200"/>
+                    <Button Content="Refresh" Width="90" Command="{Binding RefreshModelsCommand}" Margin="8 0 0 0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
+                    <TextBlock Text="Chunk Size (words)" VerticalAlignment="Center" Width="140"/>
+                    <TextBox Text="{Binding ChunkSize, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Preset" VerticalAlignment="Center" Width="80"/>
+                    <ComboBox ItemsSource="{Binding PromptPresets}" SelectedItem="{Binding SelectedPreset}" DisplayMemberPath="Name" Width="200"/>
+                    <Button Content="Load" Command="{Binding LoadPresetCommand}" Width="70" Margin="8 0 0 0"/>
+                    <Button Content="Save" Command="{Binding SavePresetCommand}" Width="70" Margin="8 0 0 0"/>
+                    <Button Content="Delete" Command="{Binding DeletePresetCommand}" Width="80" Margin="8 0 0 0"/>
+                </StackPanel>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Prompt" Grid.Row="1" Grid.Column="1" Margin="0 0 0 12">
+            <Grid Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBox Text="{Binding PromptText, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True"
+                         VerticalScrollBarVisibility="Auto"
+                         TextWrapping="Wrap"/>
+                <TextBox Grid.Row="1"
+                         Margin="0 8 0 0"
+                         ToolTip="Name for saving the current prompt as a preset"
+                         Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Transcription" Grid.Row="2" Grid.ColumnSpan="2" Margin="0 0 0 12">
+            <Grid Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="{Binding TranscriptionStatus}" Margin="0 0 0 8"/>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding TranscriptChunks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="Gray" BorderThickness="1" Margin="0 0 0 8" Padding="8">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Header}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Content}" TextWrapping="Wrap" Margin="0 4 0 0"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Summary" Grid.Row="3" Grid.ColumnSpan="2">
+            <Grid Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="0 0 0 8">
+                    <Button Content="Generate Summary" Command="{Binding GenerateSummaryCommand}" Width="160"/>
+                    <ProgressBar Width="200" Height="20" IsIndeterminate="{Binding IsProcessing}" Visibility="{Binding IsProcessing, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="8 0 0 0"/>
+                </StackPanel>
+                <TextBox Grid.Row="1"
+                         Text="{Binding SummaryText}"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"/>
+            </Grid>
+        </GroupBox>
+    </Grid>
+</Window>
